@@ -141,7 +141,7 @@ window.Dashboard = function Dashboard() {
       <TopBar onNav={n => setView({name:n})} view={view.name}/>
       <div className="app">
         <div className="uc-banner"><span className="dot"/>M1 — Application IA & Big Data · Manager projet info</div>
-        <h1 className="page-title">Salut Wilfrid 👋</h1>
+        <h1 className="page-title">Salut jeune Bongo</h1>
         <p className="page-subtitle">Dashboard de révision pour les UC D41.1 & D41.2 — un mois pour tout maîtriser.</p>
 
         <div className="intro-grid">
