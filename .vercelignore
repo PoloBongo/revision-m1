@@ -1,0 +1,10 @@
+# Fichiers de référence lourds, non servis par l'application
+uploads/
+
+# Fichiers spécifiques à GitHub Pages / hors-app
+.nojekyll
+tweaks-panel.jsx
+
+# Git / éditeur
+.git/
+.claude/
