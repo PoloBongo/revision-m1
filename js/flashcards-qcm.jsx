@@ -79,7 +79,16 @@ window.FlashcardsView = function FlashcardsView({ chapter, onClose }) {
 
 // Vue QCM
 window.QcmView = function QcmView({ chapter, onClose, mode = 'normal' }) {
-  const questions = window.QCM[chapter.id] || [];
+  const rawQuestions = window.QCM[chapter.id] || [];
+  // Mélange l'ordre des choix pour éviter que la bonne réponse soit toujours à la même position.
+  const questions = useMemo(() => rawQuestions.map(q => {
+    const order = q.choices.map((_, idx) => idx).sort(() => Math.random() - 0.5);
+    return {
+      ...q,
+      choices: order.map(idx => q.choices[idx]),
+      answer: order.indexOf(q.answer),
+    };
+  }), [chapter.id]);
   const [i, setI] = useState(0);
   const [picked, setPicked] = useState(null);
   const [score, setScore] = useState(0);
