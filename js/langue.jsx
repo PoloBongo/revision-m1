@@ -26,7 +26,16 @@ window.ExamTimer = function ExamTimer({ minutes, label = "Temps restant" }) {
 
 // ── 1. Compréhension écrite (texte + 10 QCM, 3 pts/réponse) ──────────────
 window.ComprehensionView = function ComprehensionView({ doc, onClose }) {
-  const questions = doc.questions;
+  const [seed, setSeed] = useState(0); // change pour re-mélanger
+  // Mélange l'ordre des questions ET des réponses à chaque passage.
+  const questions = useMemo(() => {
+    const order = doc.questions.map((_, i) => i).sort(() => Math.random() - 0.5);
+    return order.map(qi => {
+      const q = doc.questions[qi];
+      const co = q.choices.map((_, i) => i).sort(() => Math.random() - 0.5);
+      return { ...q, choices: co.map(i => q.choices[i]), answer: co.indexOf(q.answer) };
+    });
+  }, [doc.id, seed]);
   const [picked, setPicked] = useState({});       // {qIdx: choiceIdx}
   const [submitted, setSubmitted] = useState(false);
 
@@ -84,7 +93,7 @@ window.ComprehensionView = function ComprehensionView({ doc, onClose }) {
             </h3>
             <p style={{fontSize:14}}>{points} / {questions.length*3} points · {score>=8 ? '🏆 Très bon niveau' : score>=5 ? '👍 À consolider' : '📚 À retravailler'}</p>
             <div style={{display:'flex', gap:12, justifyContent:'center', marginTop:12}}>
-              <Btn onClick={() => { setPicked({}); setSubmitted(false); }}>↻ Recommencer</Btn>
+              <Btn onClick={() => { setPicked({}); setSubmitted(false); setSeed(x => x + 1); }}>↻ Recommencer (re-mélange)</Btn>
               <Btn kind="primary" onClick={onClose}>Retour</Btn>
             </div>
           </div>
@@ -98,11 +107,17 @@ window.ComprehensionView = function ComprehensionView({ doc, onClose }) {
 window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
   const [picked, setPicked] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [seed, setSeed] = useState(0);
 
   const parts = useMemo(() => doc.text.split(/(\{\d+\})/g), [doc.id]);
-  const total = doc.blanks.length;
+  // Mélange l'ordre des propositions de chaque blanc (la bonne n'est plus toujours en 1er).
+  const blanks = useMemo(() => doc.blanks.map(b => {
+    const order = b.options.map((_, i) => i).sort(() => Math.random() - 0.5);
+    return { options: order.map(i => b.options[i]), answer: order.indexOf(b.answer) };
+  }), [doc.id, seed]);
+  const total = blanks.length;
   const answered = Object.keys(picked).length;
-  const score = doc.blanks.reduce((a, b, i) => a + (picked[i] === b.answer ? 1 : 0), 0);
+  const score = blanks.reduce((a, b, i) => a + (picked[i] === b.answer ? 1 : 0), 0);
   const points = score * window.LANGUE.pointsParBonneReponse;
 
   function submit(e) {
@@ -111,6 +126,7 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
     if (pct >= 80) Sfx.correct?.(); else Sfx.wrong?.();
     award(score * 3, e);
   }
+  function restart() { setPicked({}); setSubmitted(false); setSeed(x => x + 1); }
 
   return (
     <View title={`Vocabulaire — ${doc.title}`} onClose={onClose}
@@ -118,37 +134,46 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
       <div style={{maxWidth:820, margin:'0 auto'}}>
         <p style={{color:'var(--fg-2)', fontSize:13}}>Complète chaque blanc avec la proposition correcte (1 seule juste). 3 pts par bonne réponse.</p>
 
-        <div className="diagram-card" style={{lineHeight:2.4, fontSize:15}}>
+        <div className="diagram-card" style={{lineHeight:2.6, fontSize:15}}>
           {parts.map((part, k) => {
             const m = part.match(/^\{(\d+)\}$/);
             if (!m) return <span key={k} style={{whiteSpace:'pre-line'}}>{part}</span>;
             const bi = +m[1];
-            const blank = doc.blanks[bi];
+            const blank = blanks[bi];
             const sel = picked[bi];
+            const isWrong = submitted && sel !== blank.answer;
             let color = 'var(--border-strong)';
             if (submitted) color = sel === blank.answer ? 'var(--good)' : 'var(--bad)';
             else if (sel != null) color = 'var(--accent)';
             return (
-              <select key={k} value={sel ?? ''} disabled={submitted}
-                onChange={e => setPicked(p => ({...p, [bi]: +e.target.value}))}
-                style={{margin:'0 4px', padding:'3px 6px', borderRadius:6, background:'var(--bg-3)',
-                        color:'var(--fg-1)', border:`1.5px solid ${color}`, fontSize:14, fontFamily:'var(--mono)'}}>
-                <option value="" disabled>— {bi+1} —</option>
-                {blank.options.map((o, oi) => <option key={oi} value={oi}>{o}</option>)}
-              </select>
+              <span key={k} style={{whiteSpace:'nowrap'}}>
+                <sup style={{fontFamily:'var(--mono)', fontSize:10, color:'var(--fg-3)', marginRight:1}}>{bi+1}</sup>
+                <select value={sel ?? ''} disabled={submitted}
+                  onChange={e => setPicked(p => ({...p, [bi]: +e.target.value}))}
+                  style={{margin:'0 2px', padding:'3px 6px', borderRadius:6, background:'var(--bg-3)',
+                          color:'var(--fg-1)', border:`1.5px solid ${color}`, fontSize:14, fontFamily:'var(--mono)'}}>
+                  <option value="" disabled>— {bi+1} —</option>
+                  {blank.options.map((o, oi) => <option key={oi} value={oi}>{o}</option>)}
+                </select>
+                {isWrong && (
+                  <span style={{color:'var(--good)', fontFamily:'var(--mono)', fontSize:13, margin:'0 4px 0 2px'}}>
+                    →&nbsp;{blank.options[blank.answer]}
+                  </span>
+                )}
+              </span>
             );
           })}
         </div>
 
         {submitted && (
           <div style={{margin:'18px 0'}}>
-            <div className="section-label">Corrigé</div>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(150px,1fr))', gap:8}}>
-              {doc.blanks.map((b, i) => {
+            <div className="section-label">Corrigé complet</div>
+            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px,1fr))', gap:8}}>
+              {blanks.map((b, i) => {
                 const ok = picked[i] === b.answer;
                 return (
                   <div key={i} className="tag" style={{justifyContent:'flex-start', color: ok?'var(--good)':'var(--bad)'}}>
-                    {i+1}. {ok ? '✓' : '✗'} {b.options[b.answer]}
+                    <strong style={{marginRight:4}}>{i+1}.</strong> {ok ? '✓' : '✗'} {b.options[b.answer]}
                   </div>
                 );
               })}
@@ -168,7 +193,7 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
             </h3>
             <p style={{fontSize:14}}>{points} points</p>
             <div style={{display:'flex', gap:12, justifyContent:'center', marginTop:12}}>
-              <Btn onClick={() => { setPicked({}); setSubmitted(false); }}>↻ Recommencer</Btn>
+              <Btn onClick={restart}>↻ Recommencer (re-mélange)</Btn>
               <Btn kind="primary" onClick={onClose}>Retour</Btn>
             </div>
           </div>
@@ -246,6 +271,16 @@ window.LangueView = function LangueView({ onClose }) {
   const L = window.LANGUE;
   const [sub, setSub] = useState(null);
 
+  // Tire un texte au hasard, jamais le même deux fois de suite (mémorisé via localStorage).
+  function lancerAleatoire(list, type, storageKey) {
+    const last = (() => { try { return localStorage.getItem(storageKey); } catch { return null; } })();
+    let pool = list.filter(d => d.id !== last);
+    if (!pool.length) pool = list; // sécurité si un seul texte
+    const doc = pool[Math.floor(Math.random() * pool.length)];
+    try { localStorage.setItem(storageKey, doc.id); } catch {}
+    setSub({ type, doc });
+  }
+
   if (sub && sub.type === 'ce') return <ComprehensionView doc={sub.doc} onClose={() => setSub(null)} />;
   if (sub && sub.type === 'voc') return <VocabulaireView doc={sub.doc} onClose={() => setSub(null)} />;
   if (sub === 'red') return <RedactionView onClose={() => setSub(null)} />;
@@ -268,6 +303,15 @@ window.LangueView = function LangueView({ onClose }) {
         </div>
 
         <div className="section-label">1 · Compréhension écrite — 20 questions (60 pts)</div>
+        <div className="diagram-card" style={{display:'flex', alignItems:'center', gap:14, flexWrap:'wrap'}}>
+          <div style={{flex:1, minWidth:200}}>
+            <h3 style={{margin:0}}>🎲 Sujet aléatoire</h3>
+            <p style={{margin:'4px 0 0', color:'var(--fg-2)', fontSize:13}}>
+              Lance un texte au hasard parmi les {L.comprehension.length} — jamais le même deux fois de suite. Ou choisis ci-dessous.
+            </p>
+          </div>
+          <Btn kind="primary" onClick={() => lancerAleatoire(L.comprehension, 'ce', 'langue_lastCE')}>▶ Lancer un sujet aléatoire</Btn>
+        </div>
         <div className="chapter-grid">
           {L.comprehension.map(doc => (
             <div key={doc.id} className="chapter-card" onClick={() => setSub({type:'ce', doc})}>
@@ -280,6 +324,15 @@ window.LangueView = function LangueView({ onClose }) {
         </div>
 
         <div className="section-label">2 · Vocabulaire — texte à trous (90 pts)</div>
+        <div className="diagram-card" style={{display:'flex', alignItems:'center', gap:14, flexWrap:'wrap'}}>
+          <div style={{flex:1, minWidth:200}}>
+            <h3 style={{margin:0}}>🎲 Texte aléatoire</h3>
+            <p style={{margin:'4px 0 0', color:'var(--fg-2)', fontSize:13}}>
+              Lance un texte à trous au hasard parmi les {L.vocabulaire.length} — jamais le même deux fois de suite. Ou choisis ci-dessous.
+            </p>
+          </div>
+          <Btn kind="primary" onClick={() => lancerAleatoire(L.vocabulaire, 'voc', 'langue_lastVOC')}>▶ Lancer un texte aléatoire</Btn>
+        </div>
         <div className="chapter-grid">
           {L.vocabulaire.map(doc => (
             <div key={doc.id} className="chapter-card" onClick={() => setSub({type:'voc', doc})}>
