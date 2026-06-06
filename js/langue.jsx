@@ -113,7 +113,7 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
   // Mélange l'ordre des propositions de chaque blanc (la bonne n'est plus toujours en 1er).
   const blanks = useMemo(() => doc.blanks.map(b => {
     const order = b.options.map((_, i) => i).sort(() => Math.random() - 0.5);
-    return { options: order.map(i => b.options[i]), answer: order.indexOf(b.answer) };
+    return { options: order.map(i => b.options[i]), answer: order.indexOf(b.answer), explain: b.explain };
   }), [doc.id, seed]);
   const total = blanks.length;
   const answered = Object.keys(picked).length;
@@ -167,13 +167,22 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
 
         {submitted && (
           <div style={{margin:'18px 0'}}>
-            <div className="section-label">Corrigé complet</div>
-            <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px,1fr))', gap:8}}>
+            <div className="section-label">Corrigé détaillé — pourquoi ce mot ?</div>
+            <div style={{display:'grid', gap:8}}>
               {blanks.map((b, i) => {
                 const ok = picked[i] === b.answer;
                 return (
-                  <div key={i} className="tag" style={{justifyContent:'flex-start', color: ok?'var(--good)':'var(--bad)'}}>
-                    <strong style={{marginRight:4}}>{i+1}.</strong> {ok ? '✓' : '✗'} {b.options[b.answer]}
+                  <div key={i} className="diagram-card" style={{padding:'10px 12px', display:'flex', gap:10, alignItems:'flex-start'}}>
+                    <span style={{fontFamily:'var(--mono)', fontSize:13, color: ok?'var(--good)':'var(--bad)', minWidth:46}}>
+                      {ok ? '✓' : '✗'} {i+1}
+                    </span>
+                    <div style={{flex:1, fontSize:13.5, lineHeight:1.5}}>
+                      <strong style={{color:'var(--good)'}}>{b.options[b.answer]}</strong>
+                      {!ok && picked[i] != null && (
+                        <span style={{color:'var(--fg-3)'}}> (tu avais mis « <span style={{color:'var(--bad)'}}>{b.options[picked[i]]}</span> »)</span>
+                      )}
+                      {b.explain && <div style={{color:'var(--fg-2)', marginTop:3}}>💡 {b.explain}</div>}
+                    </div>
                   </div>
                 );
               })}
