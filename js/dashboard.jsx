@@ -135,6 +135,7 @@ window.Dashboard = function Dashboard() {
   if (view.name === 'glossary') return <GlossaryView onClose={() => setView({name:'dashboard'})}/>;
   if (view.name === 'diagrams') return <DiagramsView onClose={() => setView({name:'dashboard'})}/>;
   if (view.name === 'boss') return <BossView onClose={() => setView({name:'dashboard'})}/>;
+  if (view.name === 'langue') return <LangueView onClose={() => setView({name:'dashboard'})}/>;
 
   return (
     <>
@@ -200,6 +201,16 @@ window.Dashboard = function Dashboard() {
             <p>20 questions tirées de tous les chapitres · 20 min chrono. Meilleur score : <strong style={{color:'var(--accent)'}}>{s.bestBoss}/20</strong></p>
           </div>
           <Btn kind="primary" onClick={() => setView({name:'boss'})}>Affronter le boss</Btn>
+        </div>
+
+        <div className="section-label">Langue vivante — Épreuve écrite B2</div>
+        <div className="boss-card" style={{cursor:'pointer'}} onClick={() => setView({name:'langue'})}>
+          <div className="boss-icon">🇬🇧</div>
+          <div style={{flex:1}}>
+            <h3>Examen blanc — Anglais (CECRL B2)</h3>
+            <p>Compréhension écrite (QCM) · Vocabulaire à trous · Rédaction d'essai · 220 pts · 1 h 45 chrono.</p>
+          </div>
+          <Btn kind="primary" onClick={(e) => { e.stopPropagation(); setView({name:'langue'}); }}>S'entraîner</Btn>
         </div>
 
         <div style={{textAlign:'center', color:'var(--fg-3)', fontSize:11, fontFamily:'var(--mono)', marginTop:40, paddingBottom:20}}>
