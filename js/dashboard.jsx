@@ -136,6 +136,7 @@ window.Dashboard = function Dashboard() {
   if (view.name === 'diagrams') return <DiagramsView onClose={() => setView({name:'dashboard'})}/>;
   if (view.name === 'boss') return <BossView onClose={() => setView({name:'dashboard'})}/>;
   if (view.name === 'langue') return <LangueView onClose={() => setView({name:'dashboard'})}/>;
+  if (view.name === 'ecologie') return <EcologieView onClose={() => setView({name:'dashboard'})}/>;
 
   return (
     <>
@@ -211,6 +212,16 @@ window.Dashboard = function Dashboard() {
             <p>Compréhension écrite (QCM) · Vocabulaire à trous · Rédaction d'essai · 220 pts · 1 h 45 chrono.</p>
           </div>
           <Btn kind="primary" onClick={(e) => { e.stopPropagation(); setView({name:'langue'}); }}>S'entraîner</Btn>
+        </div>
+
+        <div className="section-label">Écologie — UC A4/5 (transition écologique)</div>
+        <div className="boss-card" style={{cursor:'pointer'}} onClick={() => setView({name:'ecologie'})}>
+          <div className="boss-icon">🌍</div>
+          <div style={{flex:1}}>
+            <h3>Épreuve écologie — Les entreprises & la transition écologique</h3>
+            <p>QCM · 40 questions · 3 sujets (1 officiel + 2 inédits) · 120 pts · 1 h chrono.</p>
+          </div>
+          <Btn kind="primary" onClick={(e) => { e.stopPropagation(); setView({name:'ecologie'}); }}>S'entraîner</Btn>
         </div>
 
         <div style={{textAlign:'center', color:'var(--fg-3)', fontSize:11, fontFamily:'var(--mono)', marginTop:40, paddingBottom:20}}>
