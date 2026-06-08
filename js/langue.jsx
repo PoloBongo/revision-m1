@@ -25,7 +25,9 @@ window.ExamTimer = function ExamTimer({ minutes, label = "Temps restant" }) {
 };
 
 // ── 1. Compréhension écrite (texte + 10 QCM, 3 pts/réponse) ──────────────
-window.ComprehensionView = function ComprehensionView({ doc, onClose }) {
+// stepInfo (optionnel) : { badge, nextLabel } — utilisé en mode « épreuve complète ».
+//   En son absence, le comportement reste strictement identique au lancement individuel.
+window.ComprehensionView = function ComprehensionView({ doc, onClose, stepInfo }) {
   const [seed, setSeed] = useState(0); // change pour re-mélanger
   // Mélange l'ordre des questions ET des réponses à chaque passage.
   const questions = useMemo(() => {
@@ -52,7 +54,10 @@ window.ComprehensionView = function ComprehensionView({ doc, onClose }) {
 
   return (
     <View title={`Compréhension — ${doc.title}`} onClose={onClose}
-      headerRight={<span className="tag">{doc.theme}</span>}>
+      headerRight={<div style={{display:'flex', gap:8, alignItems:'center'}}>
+        {stepInfo && <span className="tag" style={{color:'var(--accent)'}}>{stepInfo.badge}</span>}
+        <span className="tag">{doc.theme}</span>
+      </div>}>
       <div style={{maxWidth:820, margin:'0 auto'}}>
         <div className="diagram-card" style={{whiteSpace:'pre-line', lineHeight:1.7, fontSize:15}}>
           {doc.text}
@@ -94,7 +99,7 @@ window.ComprehensionView = function ComprehensionView({ doc, onClose }) {
             <p style={{fontSize:14}}>{points} / {questions.length*3} points · {score>=8 ? '🏆 Très bon niveau' : score>=5 ? '👍 À consolider' : '📚 À retravailler'}</p>
             <div style={{display:'flex', gap:12, justifyContent:'center', marginTop:12}}>
               <Btn onClick={() => { setPicked({}); setSubmitted(false); setSeed(x => x + 1); }}>↻ Recommencer (re-mélange)</Btn>
-              <Btn kind="primary" onClick={onClose}>Retour</Btn>
+              <Btn kind="primary" onClick={onClose}>{stepInfo ? stepInfo.nextLabel : 'Retour'}</Btn>
             </div>
           </div>
         )}
@@ -104,7 +109,8 @@ window.ComprehensionView = function ComprehensionView({ doc, onClose }) {
 };
 
 // ── 2. Vocabulaire (texte à trous) ───────────────────────────────────────
-window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
+// stepInfo (optionnel) : { badge, nextLabel } — mode « épreuve complète ».
+window.VocabulaireView = function VocabulaireView({ doc, onClose, stepInfo }) {
   const [picked, setPicked] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [seed, setSeed] = useState(0);
@@ -130,7 +136,10 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
 
   return (
     <View title={`Vocabulaire — ${doc.title}`} onClose={onClose}
-      headerRight={<span className="tag">{doc.theme}</span>}>
+      headerRight={<div style={{display:'flex', gap:8, alignItems:'center'}}>
+        {stepInfo && <span className="tag" style={{color:'var(--accent)'}}>{stepInfo.badge}</span>}
+        <span className="tag">{doc.theme}</span>
+      </div>}>
       <div style={{maxWidth:820, margin:'0 auto'}}>
         <p style={{color:'var(--fg-2)', fontSize:13}}>Complète chaque blanc avec la proposition correcte (1 seule juste). 3 pts par bonne réponse.</p>
 
@@ -203,7 +212,7 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
             <p style={{fontSize:14}}>{points} points</p>
             <div style={{display:'flex', gap:12, justifyContent:'center', marginTop:12}}>
               <Btn onClick={restart}>↻ Recommencer (re-mélange)</Btn>
-              <Btn kind="primary" onClick={onClose}>Retour</Btn>
+              <Btn kind="primary" onClick={onClose}>{stepInfo ? stepInfo.nextLabel : 'Retour'}</Btn>
             </div>
           </div>
         )}
@@ -213,11 +222,14 @@ window.VocabulaireView = function VocabulaireView({ doc, onClose }) {
 };
 
 // ── 3. Rédaction (essai + compteur de mots + checklist B2) ───────────────
-window.RedactionView = function RedactionView({ onClose }) {
-  const prompts = window.LANGUE.redaction;
+// prompts (optionnel) : liste de sujets ; défaut = window.LANGUE.redaction (mode individuel inchangé).
+// stepInfo (optionnel) : { badge, nextLabel } — mode « épreuve complète ».
+window.RedactionView = function RedactionView({ onClose, prompts, stepInfo }) {
+  prompts = prompts || window.LANGUE.redaction;
   const [pi, setPi] = useState(0);
   const [text, setText] = useState('');
   const [checks, setChecks] = useState({});
+  const [showModele, setShowModele] = useState(false);
 
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const target = 400;
@@ -226,17 +238,21 @@ window.RedactionView = function RedactionView({ onClose }) {
 
   return (
     <View title="Rédaction — Essai B2" onClose={onClose}
-      headerRight={<ExamTimer minutes={40} label="" />}>
+      headerRight={stepInfo
+        ? <span className="tag" style={{color:'var(--accent)'}}>{stepInfo.badge}</span>
+        : <ExamTimer minutes={40} label="" />}>
       <div style={{maxWidth:820, margin:'0 auto'}}>
-        <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:12}}>
-          {prompts.map((p, i) => (
-            <Btn key={p.id} kind={i===pi?'primary':'default'} onClick={() => setPi(i)}>Sujet {i+1}</Btn>
-          ))}
-        </div>
+        {prompts.length > 1 && (
+          <div style={{display:'flex', gap:8, flexWrap:'wrap', marginBottom:12}}>
+            {prompts.map((p, i) => (
+              <Btn key={p.id} kind={i===pi?'primary':'default'} onClick={() => { setPi(i); setShowModele(false); }}>Sujet {i+1}</Btn>
+            ))}
+          </div>
+        )}
 
         <div className="diagram-card">
           <span className="tag">{prompts[pi].theme}</span>
-          <p style={{margin:'10px 0 0', fontSize:15, lineHeight:1.6}}>{prompts[pi].prompt}</p>
+          <p style={{margin:'10px 0 0', fontSize:15, lineHeight:1.6, whiteSpace:'pre-line'}}>{prompts[pi].prompt}</p>
         </div>
 
         <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', margin:'16px 0 6px'}}>
@@ -263,9 +279,24 @@ window.RedactionView = function RedactionView({ onClose }) {
           ))}
         </div>
 
+        {prompts[pi].modele && (
+          <>
+            <div style={{textAlign:'center', margin:'18px 0 0'}}>
+              <Btn kind="ghost" onClick={() => setShowModele(s => !s)}>
+                {showModele ? '▲ Masquer la copie modèle' : '▼ Voir une copie modèle (corrigé)'}
+              </Btn>
+            </div>
+            {showModele && (
+              <div className="diagram-card" style={{whiteSpace:'pre-line', lineHeight:1.7, fontSize:14.5, marginTop:12}}>
+                {prompts[pi].modele}
+              </div>
+            )}
+          </>
+        )}
+
         <div style={{display:'flex', gap:12, justifyContent:'flex-end', margin:'18px 0'}}>
           <Btn kind="ghost" onClick={() => { setText(''); setChecks({}); }}>Effacer</Btn>
-          <Btn kind="primary" onClick={onClose}>Retour</Btn>
+          <Btn kind="primary" onClick={onClose}>{stepInfo ? stepInfo.nextLabel : 'Retour'}</Btn>
         </div>
         <p style={{color:'var(--fg-3)', fontSize:12, textAlign:'center'}}>
           💡 Astuce : vise 380–420 mots, un argument par paragraphe, et coche la grille pour t'auto-corriger.
@@ -273,6 +304,89 @@ window.RedactionView = function RedactionView({ onClose }) {
       </div>
     </View>
   );
+};
+
+// ── Épreuve complète (2 compréhensions + vocabulaire + rédaction enchaînés) ─
+// Reproduit le déroulé officiel. Indépendant du mode « sujet aléatoire » du hub.
+window.EpreuveView = function EpreuveView({ epreuve, onClose }) {
+  const steps = [
+    ...epreuve.comprehension.map((doc, i) => ({ kind: 'ce', doc, label: `Compréhension ${i + 1}` })),
+    { kind: 'voc', doc: epreuve.vocabulaire, label: 'Vocabulaire' },
+    { kind: 'red', label: 'Rédaction' },
+  ];
+  const total = steps.length;
+  const [step, setStep] = useState(-1); // -1 = intro · 'done' = récapitulatif
+  const next = () => setStep(s => (typeof s === 'number' && s + 1 >= total ? 'done' : s + 1));
+  const stepInfoFor = i => ({
+    badge: `Épreuve · ${i + 1}/${total} · ${steps[i].label}`,
+    nextLabel: i === total - 1 ? 'Terminer l\'épreuve ✓' : 'Étape suivante →',
+  });
+
+  // Intro
+  if (step === -1) {
+    const L = window.LANGUE;
+    return (
+      <View title={`Épreuve — ${epreuve.title}`} onClose={onClose}
+        headerRight={<span className="tag" style={{color: epreuve.officiel ? 'var(--accent)' : undefined}}>{epreuve.session}</span>}>
+        <div style={{maxWidth:820, margin:'0 auto'}}>
+          <div className="diagram-card">
+            <h3 style={{marginTop:0}}>📋 Déroulé de l'épreuve {epreuve.officiel && '· sujet officiel'}</h3>
+            <p style={{color:'var(--fg-2)', fontSize:13, margin:'0 0 10px'}}>
+              Thème : <strong>{epreuve.theme}</strong> · Durée officielle : <strong>1 h 45</strong> · Niveau <strong>B2 (CECRL)</strong>.
+            </p>
+            <div style={{display:'flex', flexWrap:'wrap', gap:8, marginBottom:12}}>
+              <span className="tag">QCM : {L.bareme.qcm} pts</span>
+              <span className="tag">Vocabulaire : {L.bareme.vocab} pts</span>
+              <span className="tag">Essai : {L.bareme.essai} pts</span>
+              <span className="tag" style={{color:'var(--accent)'}}>Total : {L.bareme.total} pts</span>
+            </div>
+            <ol style={{margin:'0 0 4px', paddingLeft:20, color:'var(--fg-2)', fontSize:14, lineHeight:1.8}}>
+              {steps.map((s, i) => (
+                <li key={i}>
+                  <strong style={{color:'var(--fg-1)'}}>{s.label}</strong>
+                  {s.kind === 'red' ? ' — essai ~400 mots' : ` — ${s.doc.title}`}
+                </li>
+              ))}
+            </ol>
+          </div>
+          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12, margin:'18px 0'}}>
+            <ExamTimer minutes={L.duree} />
+            <Btn kind="primary" onClick={() => setStep(0)}>▶ Commencer l'épreuve</Btn>
+          </div>
+          <p style={{color:'var(--fg-3)', fontSize:12, textAlign:'center'}}>
+            💡 Les 4 parties s'enchaînent. Tu peux lancer le minuteur ci-dessus pour te placer en conditions réelles.
+          </p>
+        </div>
+      </View>
+    );
+  }
+
+  // Récapitulatif
+  if (step === 'done') {
+    return (
+      <View title={`Épreuve terminée — ${epreuve.title}`} onClose={onClose}>
+        <div style={{maxWidth:680, margin:'0 auto'}}>
+          <div className="empty-state">
+            <h3 style={{fontSize:30, color:'var(--good)'}}>✓ Épreuve terminée</h3>
+            <p style={{fontSize:14}}>Tu as parcouru les {total} parties de « {epreuve.title} ».</p>
+            <p style={{color:'var(--fg-2)', fontSize:13}}>
+              Les scores du QCM et du vocabulaire se sont affichés à chaque étape. La rédaction s'auto-évalue avec la grille B2{epreuve.redaction.modele ? ' (une copie modèle est disponible dans la partie essai)' : ''}.
+            </p>
+            <div style={{display:'flex', gap:12, justifyContent:'center', marginTop:16}}>
+              <Btn onClick={() => setStep(-1)}>↻ Refaire l'épreuve</Btn>
+              <Btn kind="primary" onClick={onClose}>Retour aux épreuves</Btn>
+            </div>
+          </div>
+        </div>
+      </View>
+    );
+  }
+
+  // Étapes
+  const cur = steps[step];
+  if (cur.kind === 'ce')  return <ComprehensionView doc={cur.doc} stepInfo={stepInfoFor(step)} onClose={next} />;
+  if (cur.kind === 'voc') return <VocabulaireView  doc={cur.doc} stepInfo={stepInfoFor(step)} onClose={next} />;
+  return <RedactionView prompts={[epreuve.redaction]} stepInfo={stepInfoFor(step)} onClose={next} />;
 };
 
 // ── Hub Langue vivante ───────────────────────────────────────────────────
@@ -290,6 +404,7 @@ window.LangueView = function LangueView({ onClose }) {
     setSub({ type, doc });
   }
 
+  if (sub && sub.type === 'epreuve') return <EpreuveView epreuve={sub.epreuve} onClose={() => setSub(null)} />;
   if (sub && sub.type === 'ce') return <ComprehensionView doc={sub.doc} onClose={() => setSub(null)} />;
   if (sub && sub.type === 'voc') return <VocabulaireView doc={sub.doc} onClose={() => setSub(null)} />;
   if (sub === 'red') return <RedactionView onClose={() => setSub(null)} />;
@@ -310,6 +425,30 @@ window.LangueView = function LangueView({ onClose }) {
             <span className="tag" style={{color:'var(--accent)'}}>Total : {L.bareme.total} pts</span>
           </div>
         </div>
+
+        {L.epreuves && L.epreuves.length > 0 && (
+          <>
+            <div className="section-label">🎯 Épreuves blanches complètes — format officiel (2 CE + vocabulaire + essai)</div>
+            <div className="diagram-card" style={{padding:'12px 14px', marginBottom:10}}>
+              <p style={{margin:0, color:'var(--fg-2)', fontSize:13}}>
+                Enchaîne une épreuve entière en conditions réelles (220 pts). Distinct du mode « sujet aléatoire » ci-dessous, qui reste disponible à l'unité.
+              </p>
+            </div>
+            <div className="chapter-grid">
+              {L.epreuves.map(ep => (
+                <div key={ep.id} className="chapter-card" onClick={() => setSub({type:'epreuve', epreuve: ep})}>
+                  <div className="accent-bar" style={{background: ep.officiel ? '#F59E0B' : '#A78BFA'}}/>
+                  <span className="icon">{ep.officiel ? '🏛️' : '📝'}</span>
+                  <h3>{ep.title}</h3>
+                  <p>{ep.session} · {ep.theme}</p>
+                  <p style={{color:'var(--fg-3)', fontSize:12}}>
+                    {ep.comprehension.length} compréhensions · {ep.vocabulaire.blanks.length} trous · 1 essai
+                  </p>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="section-label">1 · Compréhension écrite — 20 questions (60 pts)</div>
         <div className="diagram-card" style={{display:'flex', alignItems:'center', gap:14, flexWrap:'wrap'}}>

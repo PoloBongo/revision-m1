@@ -19,6 +19,11 @@ window.LANGUE = {
   // Contenu déporté dans data/langue-vocab.js (chargé AVANT ce fichier).
   vocabulaire: (window.LANGUE_VOCAB || []),
 
+  // ── ÉPREUVES COMPLÈTES (format officiel : 2 CE + 1 vocab + 1 essai) ────
+  // Contenu déporté dans data/langue-epreuves.js (chargé AVANT ce fichier).
+  // Lancement séparé du mode « sujet aléatoire » ci-dessus (qui reste inchangé).
+  epreuves: (window.LANGUE_EPREUVES || []),
+
   // ── 3. RÉDACTION (essai ~400 mots, B2) ─────────────────────────────────
   redaction: [
     { id: "es1", theme: "Économie / Travail", prompt: "Some people believe the four-day working week will become the standard everywhere in the next twenty years. To what extent do you agree? Justify your position with relevant arguments and examples. (≈ 400 words)" },
