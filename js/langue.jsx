@@ -382,11 +382,12 @@ window.EpreuveView = function EpreuveView({ epreuve, onClose }) {
     );
   }
 
-  // Étapes
+  // Étapes — key unique par étape pour forcer le remontage (sinon l'état
+  // interne picked/submitted persiste et le texte suivant s'affiche déjà corrigé).
   const cur = steps[step];
-  if (cur.kind === 'ce')  return <ComprehensionView doc={cur.doc} stepInfo={stepInfoFor(step)} onClose={next} />;
-  if (cur.kind === 'voc') return <VocabulaireView  doc={cur.doc} stepInfo={stepInfoFor(step)} onClose={next} />;
-  return <RedactionView prompts={[epreuve.redaction]} stepInfo={stepInfoFor(step)} onClose={next} />;
+  if (cur.kind === 'ce')  return <ComprehensionView key={`ce-${step}`}  doc={cur.doc} stepInfo={stepInfoFor(step)} onClose={next} />;
+  if (cur.kind === 'voc') return <VocabulaireView  key={`voc-${step}`} doc={cur.doc} stepInfo={stepInfoFor(step)} onClose={next} />;
+  return <RedactionView key={`red-${step}`} prompts={[epreuve.redaction]} stepInfo={stepInfoFor(step)} onClose={next} />;
 };
 
 // ── Hub Langue vivante ───────────────────────────────────────────────────
